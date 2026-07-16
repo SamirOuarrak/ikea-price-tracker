@@ -262,18 +262,3 @@ async function runFullScrape() {
 }
 
 module.exports = { runFullScrape, scrapeProduct, discoverAllProductUrls, parseProductPage };
-    db.prepare(
-      `UPDATE scrape_runs SET finished_at=datetime('now'), products_seen=?, products_new=?, prices_changed=?, status='done' WHERE id=?`
-    ).run(productsSeen, productsNew, pricesChanged, runId);
-
-    console.log(`=== Terminé: ${productsSeen} vus, ${productsNew} nouveaux, ${pricesChanged} prix changés ===`);
-  } catch (err) {
-    db.prepare(`UPDATE scrape_runs SET finished_at=datetime('now'), status=? WHERE id=?`).run(
-      `error: ${err.message}`,
-      runId
-    );
-    throw err;
-  }
-}
-
-module.exports = { runFullScrape, scrapeProduct, discoverAllProductUrls, parseProductPage };
