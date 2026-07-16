@@ -82,6 +82,36 @@ app.post('/api/scrape/run-now', async (req, res) => {
 
 app.get('/health', (req, res) => res.status(200).send('ok'));
 
+// Diagnostic : teste un seul appel réseau vers IKEA pour voir si le serveur est bloqué
+app.get('/api/debug/test-fetch', async (req, res) => {
+  const axios = require('axios');
+  const start = Date.now();
+  try {
+    const response = await axios.get('https://www.ikea.com/ma/fr/cat/products-products/', {
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'Accept-Language': 'fr-MA,fr;q=0.9',
+      },
+    });
+    res.json({
+      success: true,
+      status: response.status,
+      durationMs: Date.now() - start,
+      contentLength: response.data.length,
+      preview: response.data.slice(0, 300),
+    });
+  } catch (err) {
+    res.json({
+      success: false,
+      durationMs: Date.now() - start,
+      errorCode: err.code || null,
+      errorMessage: err.message,
+      responseStatus: err.response ? err.response.status : null,
+    });
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`IKEA price tracker en écoute sur 0.0.0.0:${PORT}`);
 });
