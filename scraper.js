@@ -212,6 +212,8 @@ async function runFullScrape() {
     const productUrls = await discoverAllProductUrls();
     console.log(`=== ${productUrls.length} produits uniques trouvés. Début du scraping des prix ===`);
 
+    db.prepare(`UPDATE scrape_runs SET products_found=? WHERE id=?`).run(productUrls.length, runId);
+
     for (const url of productUrls) {
       try {
         const data = await scrapeProduct(url);
@@ -232,9 +234,34 @@ async function runFullScrape() {
       } catch (err) {
         console.error(`[scrape] erreur sur ${url}: ${err.message}`);
       }
-      await sleep(300); // politesse envers le serveur
+
+      if (productsSeen % 5 === 0) {
+        db.prepare(`UPDATE scrape_runs SET products_seen=?, products_new=?, prices_changed=? WHERE id=?`).run(
+          productsSeen,
+          productsNew,
+          pricesChanged,
+          runId
+        );
+      }
+
+      await sleep(300);
     }
 
+    db.prepare(
+      `UPDATE scrape_runs SET finished_at=datetime('now'), products_seen=?, products_new=?, prices_changed=?, status='done' WHERE id=?`
+    ).run(productsSeen, productsNew, pricesChanged, runId);
+
+    console.log(`=== Terminé: ${productsSeen} vus, ${productsNew} nouveaux, ${pricesChanged} prix changés ===`);
+  } catch (err) {
+    db.prepare(`UPDATE scrape_runs SET finished_at=datetime('now'), status=? WHERE id=?`).run(
+      `error: ${err.message}`,
+      runId
+    );
+    throw err;
+  }
+}
+
+module.exports = { runFullScrape, scrapeProduct, discoverAllProductUrls, parseProductPage };
     db.prepare(
       `UPDATE scrape_runs SET finished_at=datetime('now'), products_seen=?, products_new=?, prices_changed=?, status='done' WHERE id=?`
     ).run(productsSeen, productsNew, pricesChanged, runId);
