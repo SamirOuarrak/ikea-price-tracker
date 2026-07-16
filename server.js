@@ -5,6 +5,11 @@ const cron = require('node-cron');
 const db = require('./db');
 const { runFullScrape } = require('./scraper');
 
+// Au démarrage, toute ligne encore "running" provient forcément d'un process tué par un
+// redéploiement précédent (un vrai run en cours mourrait avec le process). On les marque
+// comme interrompues pour ne pas fausser l'affichage ni bloquer un nouveau lancement.
+db.prepare(`UPDATE scrape_runs SET status='interrupted', finished_at=datetime('now') WHERE status='running'`).run();
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -72,6 +77,10 @@ app.get('/api/scrape-runs', (req, res) => {
 
 // Déclenchement manuel (utile pour tester sans attendre le cron)
 app.post('/api/scrape/run-now', async (req, res) => {
+  const running = db.prepare(`SELECT * FROM scrape_runs WHERE status='running' ORDER BY id DESC LIMIT 1`).get();
+  if (running) {
+    return res.status(409).json({ status: 'already-running', run: running });
+  }
   res.json({ status: 'started' });
   try {
     await runFullScrape();
