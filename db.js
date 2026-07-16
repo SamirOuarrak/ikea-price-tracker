@@ -46,5 +46,9 @@ CREATE TABLE IF NOT EXISTS scrape_runs (
   status          TEXT
 );
 `);
-
+try {
+  db.exec('ALTER TABLE scrape_runs ADD COLUMN products_found INTEGER');
+} catch (e) {
+  /* colonne déjà présente, on ignore */
+}
 module.exports = db;
