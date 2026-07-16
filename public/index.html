@@ -197,7 +197,11 @@ async function pollScrapeStatus() {
     if (!latest) return;
 
     if (latest.status === 'running') {
-      statusText.textContent = 'En cours... (' + (latest.products_seen || 0) + ' produits traités jusqu\'ici)';
+      const found = latest.products_found;
+      const seen = latest.products_seen || 0;
+      statusText.textContent = found
+        ? 'En cours... ' + seen + ' / ' + found + ' produits traités'
+        : 'Découverte des catégories en cours... (peut prendre plusieurs minutes)';
       setTimeout(pollScrapeStatus, 5000);
     } else if (latest.status === 'done') {
       statusText.textContent = '✅ Terminé : ' + latest.products_seen + ' produits, ' + latest.products_new + ' nouveaux, ' + latest.prices_changed + ' prix changés.';
