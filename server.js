@@ -112,6 +112,42 @@ app.get('/api/debug/test-fetch', async (req, res) => {
   }
 });
 
+// Diagnostic : montre exactement ce que l'extraction de liens trouve sur la page racine
+app.get('/api/debug/test-crawl', async (req, res) => {
+  const axios = require('axios');
+  const cheerio = require('cheerio');
+  try {
+    const response = await axios.get('https://www.ikea.com/ma/fr/cat/products-products/', {
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'Accept-Language': 'fr-MA,fr;q=0.9',
+      },
+    });
+    const html = response.data;
+    const $ = cheerio.load(html);
+
+    const allHrefs = [];
+    $('a[href]').each((_, el) => allHrefs.push($(el).attr('href')));
+
+    const catMatches = allHrefs.filter((h) => /\/cat\//i.test(h));
+    const productMatches = allHrefs.filter((h) => /\/p\//i.test(h));
+
+    res.json({
+      totalAnchorTags: allHrefs.length,
+      totalWithCatInUrl: catMatches.length,
+      totalWithPInUrl: productMatches.length,
+      sampleAllHrefs: allHrefs.slice(0, 20),
+      sampleCatHrefs: catMatches.slice(0, 10),
+      sampleProductHrefs: productMatches.slice(0, 10),
+      hasNextData: html.includes('__NEXT_DATA__'),
+      hasJsonLd: html.includes('application/ld+json'),
+    });
+  } catch (err) {
+    res.json({ success: false, errorMessage: err.message });
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`IKEA price tracker en écoute sur 0.0.0.0:${PORT}`);
 });
